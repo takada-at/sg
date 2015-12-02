@@ -1,13 +1,17 @@
-AWS Security Group Management Tool.
+AWSのセキュリティグループを管理するツールです。
 
-## Install
+セキュリティグループの設定をcsvでダウンロード、コメントをつけてバージョン管理、追加したものをAPI経由で保存という使い方ができます。
+
+## インストール
 
 ```
 $ python setup.py install
 ```
 
-## Usage
+## 使い方
+適当なディレクトリで初期化コマンドを実行してください。
 
+設定が保存されます。
 
 ```
 $ cd yourpath
@@ -22,6 +26,8 @@ xxx
 save to aws_key
 ```
 
+セキュリティグループの設定を保存します。
+
 ```
 $ sgsg.py fetch
 mkdir security_groups
@@ -29,10 +35,14 @@ GROUP: group
 save to security_groups/group.csv
 ```
 
-download your 
+ダウンロードされたcsvファイルにはコメントなどを追加することができます。
 
+またセキュリティグループの設定を追加することも可能です。
 
-# edit your csv
+追加した設定を反映するには以下のコマンドを実行してください。
 
+(保存時は確認を求められます)。
+
+```
 $ sgsg.py commit security_groups/some.csv
 ```

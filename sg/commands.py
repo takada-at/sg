@@ -24,12 +24,20 @@ def group(ctx, config, region=None):
 @group.command()
 @click.pass_context
 def init(ctx):
+    """初期化。
+    :param ctx:
+    :return:
+    """
     SgService.save_config(ctx.obj['config'])
 
 
 @group.command()
 @click.pass_context
 def fetch(ctx):
+    """セキュリティグループの設定をcsvに保存。
+    :param ctx:
+    :return:
+    """
     pathobj = Path(ctx.obj['config'].config.get("path"))
     if not pathobj.exists():
         print("mkdir %s" % pathobj)
@@ -42,10 +50,18 @@ def fetch(ctx):
 @click.argument('file_path', type=click.Path(exists=True))
 @click.pass_context
 def commit(ctx, file_path):
+    """アカウントにCSVの内容変更を反映。
+
+    :param ctx:
+    :param file_path:
+    :return:
+    """
     sg = AwsClient(ctx.obj['config'])
     file_path = Path(file_path)
     target_group = SgService.file_setting(ctx.obj['config'], file_path)
     print("GROUP: %s" % target_group)
+    if not target_group:
+        return
     diff = SgService.diff(client=sg,
                           group=target_group,
                           target_file=file_path)
