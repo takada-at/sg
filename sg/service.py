@@ -39,6 +39,7 @@ class SgService(object):
             print("enter your region[us-east-1]:")
             region = moves.input() or "us-east-1"
             with config_path.open("w") as fp:
+                print("save to %s" % str(config_path))
                 fp.write(DEFAULT_CONFIG.format(region=region))
 
         key_file = Path(config.config.get('key_file'))
@@ -107,15 +108,16 @@ class SgService(object):
             for grant in SgService.read(file_path):
                 if grant.rule not in diff.local_only:
                     grants.append(grant)
+        for grant in client.get_list():
+            if grant.rule in diff.remote_only:
+                grants.append(grant)
+        grants.sort(key=lambda x: x.grant)
         with file_path.open("w") as fp:
             print("save to %s" % file_path)
             writer = csv.DictWriter(fp, fieldnames=Grant.keys())
             writer.writeheader()
             for grant in grants:
                 writer.writerow(grant.as_dict())
-            for grant in client.get_list():
-                if grant.rule in diff.remote_only:
-                    writer.writerow(grant.as_dict())
         return file_path
 
     @staticmethod

@@ -40,7 +40,7 @@ class Grant(object):
     @classmethod
     def keys(cls):
         return ["ip_protocol", "from_port",
-                "to_port", "cidr_ip", "group"]
+                "to_port", "cidr_ip", "group", "comment"]
 
     def __init__(self, ip_protocol, from_port, to_port,
                  cidr_ip=None,
@@ -53,6 +53,7 @@ class Grant(object):
         self.group = group or None
         self.comment = comment
         self.is_cidr_ip = cidr_ip is not None
+        self.grant = cidr_ip or group
         self.rule = Rule(self.ip_protocol, self.from_port,
                          self.to_port, self.cidr_ip,
                          self.group)
@@ -62,5 +63,5 @@ class Grant(object):
 
     def __str__(self):
         rows = [self.rule.ip_protocol, self.rule.from_port,
-                self.rule.to_port, self.rule.cidr_ip or self.rule.group]
+                self.rule.to_port, self.grant]
         return "\t".join(rows)

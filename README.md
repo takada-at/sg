@@ -1,19 +1,38 @@
+AWS Security Group Management Tool.
+
 ## Install
 
 ```
-$ vim ~/.boto
-[Credentials]
-aws_access_key_id = <access key>
-aws_secret_access_key = <secret key>
+$ python setup.py install
 ```
 
 ## Usage
-```
-$ sg.py init
 
-$ sg.py fetch
+
+```
+$ cd yourpath
+$ sgsg.py init
+enter your region[us-east-1]:
+us-west-2
+save to sg.cfg
+enter your aws_access_key_id:
+xxx
+enter your aws_secret_access_key:
+xxx
+save to aws_key
+```
+
+```
+$ sgsg.py fetch
+mkdir security_groups
+GROUP: group
+save to security_groups/group.csv
+```
+
+download your 
+
 
 # edit your csv
 
-$ sg.py commit security_groups/some.csv
+$ sgsg.py commit security_groups/some.csv
 ```

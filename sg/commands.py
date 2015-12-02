@@ -53,5 +53,5 @@ def commit(ctx, file_path):
         print("nothing changed")
         return
 
-    SgService.commit(client=sg, target_group=file_path,
+    SgService.commit(client=sg, target_group=target_group,
                      diff=diff)
