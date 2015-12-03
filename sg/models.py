@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
                         print_function)
+
 from collections import namedtuple
 
 
 class Rule(namedtuple("Rule",
-                      ["ip_protocol", "from_port",
-                       "to_port", "cidr_ip", "group"])):
+                      [u"ip_protocol", u"from_port",
+                       u"to_port", u"cidr_ip", u"group"])):
     def as_dict(self):
-        return {f: getattr(self, f) for f in self._fields}
+        return {f: getattr(self, f)
+                for f in self._fields}
 
     def as_line(self):
         rows = [self.ip_protocol,
@@ -39,8 +41,8 @@ class Grant(object):
 
     @classmethod
     def keys(cls):
-        return ["ip_protocol", "from_port",
-                "to_port", "cidr_ip", "group", "comment"]
+        return [u"ip_protocol", u"from_port",
+                u"to_port", u"cidr_ip", u"group", u"comment"]
 
     def __init__(self, ip_protocol, from_port, to_port,
                  cidr_ip=None,

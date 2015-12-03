@@ -24,7 +24,44 @@ def _confirm(message, more=None):
     elif choice in no:
         return False
     else:
-        sys.stdout.write("Please respond with 'yes' or 'no'")
+        sys.stdout.write_csv("Please respond with 'yes' or 'no'")
+
+
+def to_str(obj):
+    if isinstance(obj, dict):
+        return {to_str(key): to_str(val)
+                for key, val in obj.items()}
+    elif obj is None:
+        return obj
+    else:
+        return str(obj)
+
+
+class FileService(object):
+    @staticmethod
+    def write_json(file_path, obj):
+        with open(str(file_path), 'w') as fp:
+            json.dump(obj, fp)
+
+    @staticmethod
+    def read_csv(file_path):
+        with open(str(file_path), 'r') as fio:
+            reader = csv.DictReader(fio)
+            for row in reader:
+                yield Grant(**to_str(row))
+
+    @staticmethod
+    def write_csv(file_path, data):
+        with open(str(file_path), 'w') as fio:
+            keys = Grant.keys()
+            writer = csv.writer(fio)
+            writer.writerow([to_str(val) for val in keys])
+            for grant in data:
+                vals = []
+                row = grant.as_dict()
+                for key in Grant.keys():
+                    vals.append(to_str(row.get(key, '')))
+                writer.writerow(vals)
 
 
 class SgService(object):
@@ -61,11 +98,8 @@ class SgService(object):
     def read(target_file):
         if not target_file.exists():
             raise StopIteration()
-        with target_file.open('br') as fp:
-            reader = csv.DictReader(fp)
-            for row in reader:
-                grant = Grant(**row)
-                yield grant
+        for grant in FileService.read_csv(target_file):
+            yield grant
 
     @staticmethod
     def save_groups(config, client, path):
@@ -82,9 +116,7 @@ class SgService(object):
                                        id=gr.id))
 
         group_path = config.group_data_path()
-        if not group_path.exists():
-            with group_path.open('wb') as fp:
-                json.dump(group_settings, fp=fp)
+        FileService.write_json(group_path, group_settings)
 
     @staticmethod
     def save(client, base_path, group):
@@ -97,14 +129,14 @@ class SgService(object):
         more += ["-" + rule.as_line() for rule in diff.local_only]
         if not diff.remote_only and not diff.local_only:
             print("nothing changed")
-            return
+            return file_path
         if not file_path.exists():
             allow = True
         else:
             allow = _confirm("save this setting?",
                              more="\n".join(more))
         if not allow:
-            return
+            return file_path
         grants = []
         if file_path.exists():
             for grant in SgService.read(file_path):
@@ -114,12 +146,7 @@ class SgService(object):
             if grant.rule in diff.remote_only:
                 grants.append(grant)
         grants.sort(key=lambda x: x.grant)
-        with file_path.open("wb") as fp:
-            print("save to %s" % file_path)
-            writer = csv.DictWriter(fp, fieldnames=Grant.keys())
-            writer.writeheader()
-            for grant in grants:
-                writer.writerow(grant.as_dict())
+        FileService.write_csv(file_path, grants)
         return file_path
 
     @staticmethod

@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division,
                         print_function)
 
 import mock
+from pathlib import Path
 from sg.client import Config, AwsClient
 from sg.models import Rule
 from sg.service import SgService
@@ -23,10 +24,9 @@ def test_save(config, mock_groups):
     with mock.patch("sg.service._confirm") as dummy:
         dummy.return_value = True
         client = AwsClient(config)
-        assert 2 == len(client.groups)
         SgService.save_groups(config, client,
                               config.base_path / 'security_groups')
-        assert (config.base_path / 'security_groups/mock-group.csv').exists()
+        assert Path(config.base_path / 'security_groups/mock-group.csv').exists()
 
 
 def test_diff(config, mock_groups):
