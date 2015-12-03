@@ -3,7 +3,7 @@
 EC2のセキュリティグループを取得したり、TSVからセキュリティグループを追加するよ
 """
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        print_function)
 
 import click
 from pathlib import Path

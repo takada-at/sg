@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        print_function)
 
 import boto
 import boto.ec2
@@ -13,7 +13,7 @@ from six import moves
 from .models import Grant
 
 
-DEFAULT_CONFIG = """[security_group]
+DEFAULT_CONFIG = u"""[security_group]
 region = {region}
 path = ./security_groups
 key_file = ./aws_key
@@ -22,22 +22,17 @@ key_file = ./aws_key
 
 class Config(object):
     CONFIG_PATH = './sg.cfg'
-    @classmethod
-    def save_default(cls):
-        path = Path(cls.CONFIG_PATH)
-        if not path.exists():
-            with path.open('w') as fp:
-                print("save to %s" % path)
-                fp.write(DEFAULT_CONFIG)
 
-    def __init__(self, config_path=None, region=None):
-        config_parser = moves.configparser.ConfigParser()
+    def __init__(self, config_path=None, region=None,
+                 base_path='.'):
+        config_parser = moves.configparser.SafeConfigParser()
         config_parser.readfp(io.StringIO(DEFAULT_CONFIG))
         config_parser.read([config_path])
+        self.base_path = Path(base_path)
         self.config_path = config_path
-        self.config = config_parser['security_group']
-        self.region = region or config_parser["security_group"].get("region")
-        self.key_file = config_parser["security_group"].get("key_file")
+        self.config = dict(config_parser.items('security_group'))
+        self.region = region or self.config.get("region")
+        self.key_file = self.config.get("key_file")
 
     def get_connection(self):
         if self.key_file:
@@ -54,19 +49,6 @@ class Config(object):
 
     def group_data_path(self):
         return Path(self.config['path']) / '.group.json'
-
-    def get_connection_vpc(self):
-        if self.key_file:
-            with Path(self.key_file).open() as fp:
-                key, secretkey = fp.read().rstrip().split(':')
-                args = dict(aws_access_key_id=key,
-                            aws_secret_access_key=secretkey)
-        else:
-            args = dict()
-        if self.region:
-            return boto.vpc.connect_to_region(self.region, **args)
-        else:
-            return boto.connect_ec2(**args)
 
 
 class SgException(Exception):

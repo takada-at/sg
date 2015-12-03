@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+                        print_function)
 
 import csv
 import json
@@ -55,7 +55,7 @@ class SgService(object):
             if key_id and secret_key:
                 print("save to %s" % key_file)
                 with key_file.open("w") as fp:
-                    fp.write("%s:%s" % (key_id, secret_key))
+                    fp.write(u"%s:%s" % (key_id, secret_key))
 
     @staticmethod
     def read(target_file):
@@ -69,6 +69,8 @@ class SgService(object):
 
     @staticmethod
     def save_groups(config, client, path):
+        if not path.exists():
+            path.mkdir()
         group_settings = []
         for gr in client.groups:
             savepath = SgService.save(client=client, base_path=path,
@@ -81,7 +83,7 @@ class SgService(object):
 
         group_path = config.group_data_path()
         if not group_path.exists():
-            with group_path.open('w') as fp:
+            with group_path.open('wb') as fp:
                 json.dump(group_settings, fp=fp)
 
     @staticmethod
@@ -112,7 +114,7 @@ class SgService(object):
             if grant.rule in diff.remote_only:
                 grants.append(grant)
         grants.sort(key=lambda x: x.grant)
-        with file_path.open("w") as fp:
+        with file_path.open("wb") as fp:
             print("save to %s" % file_path)
             writer = csv.DictWriter(fp, fieldnames=Grant.keys())
             writer.writeheader()
