@@ -33,4 +33,6 @@ setup(name='sg',
       author='takada-at',
       author_email='takada-at@klab.com',
       packages=find_packages('.'),
-      install_requires=readfile('requirements.txt').split('\n'))
+      install_requires=readfile('requirements.txt').split('\n'),
+      tests_require=readfile('requirements-dev.txt').split('\n'),
+      )
