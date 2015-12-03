@@ -61,7 +61,7 @@ class SgService(object):
     def read(target_file):
         if not target_file.exists():
             raise StopIteration()
-        with target_file.open('r') as fp:
+        with target_file.open('br') as fp:
             reader = csv.DictReader(fp)
             for row in reader:
                 grant = Grant(**row)
