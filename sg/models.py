@@ -36,7 +36,7 @@ class Grant(object):
                       from_port=str(rule.from_port),
                       to_port=str(rule.to_port),
                       cidr_ip=grant.cidr_ip,
-                      group=grant.group_id)
+                      group=grant.name or grant.group_id)
             yield obj
 
     @classmethod

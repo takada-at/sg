@@ -45,3 +45,16 @@ def pytest_funcarg__mock_groups(request):
                     src_group=group2)
     request.addfinalizer(end)
     return [group, group2]
+
+
+def pytest_funcarg__files(request):
+    from sg.client import AwsClient
+    from sg.service import SgService
+    config = pytest_funcarg__config(request)
+    pytest_funcarg__mock_groups(request)
+    tempdir = config.base_path
+    client = AwsClient(config)
+    path_list = SgService.save_groups(config, client,
+                                      tempdir / 'security_groups',
+                                      noconfirm=True)
+    return path_list

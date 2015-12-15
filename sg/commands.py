@@ -42,24 +42,33 @@ def fetch(ctx):
     SgService.save_groups(config=ctx.obj['config'], client=sg, path=pathobj)
 
 
-@group.command()
-@click.argument('file_path', type=click.Path(exists=True))
+@group.command("diff")
+@click.argument('file_path_list', type=click.Path(exists=True),
+                nargs=-1)
 @click.pass_context
-def commit(ctx, file_path):
+def diff_(ctx, file_path_list):
+    """差分表示
+    """
+    client = AwsClient(ctx.obj['config'])
+    config = ctx.obj['config']
+    diffs = SgService.diff_list(config=config, client=client,
+                                file_path_list=file_path_list)
+    for group_name, diff in diffs:
+        print("GROUP: %s" % group_name)
+        more = ["+" + rule.as_line() for rule in diff.local_only]
+        more += ["-" + rule.as_line() for rule in diff.remote_only]
+        print("\n".join(more))
+
+
+@group.command()
+@click.argument('file_path_list', type=click.Path(exists=True),
+                nargs=-1)
+@click.pass_context
+def commit(ctx, file_path_list):
     """アカウントにCSVの内容変更を反映。
     """
-    sg = AwsClient(ctx.obj['config'])
-    file_path = Path(file_path)
-    target_group = SgService.file_setting(ctx.obj['config'], file_path)
-    print("GROUP: %s" % target_group)
-    if not target_group:
-        return
-    diff = SgService.diff(client=sg,
-                          group=target_group,
-                          target_file=file_path)
-    if not diff.local_only and not diff.remote_only:
-        print("nothing changed")
-        return
-
-    SgService.commit(client=sg, target_group=target_group,
-                     diff=diff)
+    client = AwsClient(ctx.obj['config'])
+    config = ctx.obj['config']
+    SgService.commit_list(config=config,
+                          client=client,
+                          file_path_list=file_path_list)

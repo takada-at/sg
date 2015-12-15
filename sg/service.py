@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division,
 
 import csv
 import json
+from collections import OrderedDict
 from pathlib import Path
 from six import moves
 import sys
@@ -52,6 +53,7 @@ class FileService(object):
 
     @staticmethod
     def write_csv(file_path, data):
+        print("save", file_path)
         with open(str(file_path), 'w') as fio:
             keys = Grant.keys()
             writer = csv.writer(fio)
@@ -102,24 +104,46 @@ class SgService(object):
             yield grant
 
     @staticmethod
-    def save_groups(config, client, path):
+    def save_groups(config, client, path,
+                    noconfirm=False):
+        """グループ設定をまとめて保存.
+
+        :param config:
+        :param client:
+        :param path:
+        :param noconfirm:
+        :return:
+        """
         if not path.exists():
             path.mkdir()
         group_settings = []
+        save_path_list = []
         for gr in client.groups:
             savepath = SgService.save(client=client, base_path=path,
-                                      group=gr)
+                                      group=gr,
+                                      noconfirm=noconfirm)
             if not savepath:
                 continue
-            group_settings.append(dict(path=str(savepath.name),
-                                       group=gr.name,
-                                       id=gr.id))
-
+            save_path_list.append(savepath)
+            group_settings.append(
+                OrderedDict([('path', str(savepath.name)),
+                             ('group', gr.name),
+                             ('id', gr.id)]))
         group_path = config.group_data_path()
         FileService.write_json(group_path, group_settings)
+        return save_path_list
 
     @staticmethod
-    def save(client, base_path, group):
+    def save(client, base_path, group,
+             noconfirm=False):
+        """セキュリティグループ設定をcsvに保存.
+
+        :param client: AwsClient
+        :param base_path: 保存ディレクトリ
+        :param group: グループ名
+        :param noconfirm:
+        :return:
+        """
         file_path = base_path / ("%s.csv" % group.name)
         print("GROUP: %s" % group.name)
         diff = SgService.diff(client=client,
@@ -127,10 +151,13 @@ class SgService(object):
                               target_file=file_path)
         more = ["+" + rule.as_line() for rule in diff.remote_only]
         more += ["-" + rule.as_line() for rule in diff.local_only]
+        # 空でもファイルはつくっておく
+        if not file_path.exists():
+            FileService.write_csv(file_path, [])
         if not diff.remote_only and not diff.local_only:
             print("nothing changed")
             return file_path
-        if not file_path.exists():
+        if not file_path.exists() or noconfirm:
             allow = True
         else:
             allow = _confirm("save this setting?",
@@ -151,6 +178,13 @@ class SgService(object):
 
     @staticmethod
     def diff(client, group, target_file):
+        """差分取得.
+
+        :param client:
+        :param group:
+        :param target_file:
+        :return:
+        """
         file_contents = set()
         for grant in SgService.read(target_file):
             file_contents.add(grant.rule)
@@ -159,20 +193,73 @@ class SgService(object):
                     remote_only=current_rules-file_contents)
 
     @staticmethod
+    def diff_list(config, client, file_path_list):
+        if not file_path_list:
+            file_path_list = SgService.list_files(config)
+        diffs = []
+        for file_path in file_path_list:
+            file_path = Path(file_path)
+            target_group = SgService.file_setting(config, file_path)
+            diff = SgService.diff(client=client,
+                                  group=target_group,
+                                  target_file=file_path)
+            if not diff.local_only and not diff.remote_only:
+                continue
+            diffs.append((target_group, diff))
+        return diffs
+
+
+    @staticmethod
+    def list_files(config):
+        """csvをリストアップ.
+
+        :param config:
+        :return:
+        """
+        pathobj = Path(config.config.get("path"))
+        file_list = []
+        for subpath in pathobj.glob("*.csv"):
+            setting = SgService.file_setting(config, subpath)
+            if not setting:
+                continue
+            file_list.append(subpath)
+        return file_list
+
+    @staticmethod
     def file_setting(config, target_file):
+        """グループ設定を取得.
+
+        :param config:
+        :param target_file:
+        :return:
+        """
         group_setting = config.group_data_path()
         with group_setting.open() as fp:
-            data = json.load(fp)
+            data = json.load(fp, object_pairs_hook=OrderedDict)
             for setting in data:
                 if setting['path'] == target_file.name:
                     return setting['group']
 
     @staticmethod
-    def commit(client, diff, target_group):
+    def commit(client, diff, target_group,
+               noconfirm=False):
+        """リモートに保存.
+
+        :param client:
+        :param diff:
+        :param target_group:
+        :return:
+        """
         more = ["+" + rule.as_line() for rule in diff.local_only]
         more += ["-" + rule.as_line() for rule in diff.remote_only]
-        if _confirm("post this setting?",
-                    more="\n".join(more)):
+        if not more:
+            return
+        if noconfirm:
+            allow = True
+        else:
+            allow = _confirm("post this setting?",
+                             more="\n".join(more))
+        if allow:
             for rule in diff.local_only:
                 client.authorize(target_group=target_group,
                                  rule=rule)
@@ -181,3 +268,29 @@ class SgService(object):
                 client.remove_rule(target_group=target_group,
                                    rule=rule)
                 print("Delete %s" % rule.as_line())
+
+
+    @staticmethod
+    def commit_list(config, client, file_path_list,
+                    noconfirm=False):
+        """まとめてリモート保存.
+
+        :param config:
+        :param client:
+        :param file_path_list:
+        :param noconfirm:
+        :return:
+        """
+        if not file_path_list:
+            file_path_list = SgService.list_files(config)
+        for file_path in file_path_list:
+            group = SgService.file_setting(config, file_path)
+            if not group:
+                continue
+            diff = SgService.diff(client=client,
+                                  group=group,
+                                  target_file=file_path)
+            SgService.commit(client=client,
+                             diff=diff,
+                             target_group=group,
+                             noconfirm=noconfirm)
