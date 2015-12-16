@@ -69,6 +69,11 @@ class FileService(object):
 class SgService(object):
     @staticmethod
     def save_config(config):
+        """設定を保存.
+
+        :param config:
+        :return:
+        """
         config_path = Path(config.config_path)
         if not config_path.exists():
             allow = True
@@ -98,6 +103,11 @@ class SgService(object):
 
     @staticmethod
     def read(target_file):
+        """csv読み込み.
+        
+        :param target_file:
+        :return:
+        """
         if not target_file.exists():
             raise StopIteration()
         for grant in FileService.read_csv(target_file):
@@ -208,6 +218,7 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
+            # 差分表示の際はセキュリティグループを基準にする.
             file_path_list = SgService.list_files_remote(config, client)
         diffs = []
         for file_path in file_path_list:
@@ -230,7 +241,7 @@ class SgService(object):
         """
         file_list = []
         pathobj = Path(config.config.get("path"))
-        # すべてのSecurityGroup
+        # すべてのSecurityGroupとそれに対応するファイルをリストアップ
         for group in client.groups:
             file_path = pathobj / ("%s.csv" % group.name)
             file_list.append(file_path)
@@ -319,6 +330,7 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
+            # 指定されていなければローカルにあるファイルすべてを候補とする
             file_path_list = SgService.list_files_local(config)
         for file_path in file_path_list:
             group = SgService.file_setting(config, file_path)
