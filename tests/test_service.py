@@ -144,14 +144,14 @@ def test_commit(config, mock_groups):
                     cidr_ip="192.168.1.10/32", group=None) not in rules
 
 
-def test_list_files(config, files):
-    """SgService.list_filesのテスト.
+def test_list_files_local(config, files):
+    """SgService.list_files_localのテスト.
 
     :param config:
     :param files:
     :return:
     """
-    get_files = SgService.list_files(config, AwsClient(config))
+    get_files = SgService.list_files_local(config)
     assert set(files) == set(get_files)
 
 

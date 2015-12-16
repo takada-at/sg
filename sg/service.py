@@ -208,7 +208,7 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config, client)
+            file_path_list = SgService.list_files_remote(config, client)
         diffs = []
         for file_path in file_path_list:
             target_group = SgService.file_setting(config, file_path)
@@ -220,19 +220,36 @@ class SgService(object):
             diffs.append((target_group, diff))
         return diffs
 
+    @staticmethod
+    def list_files_remote(config, client):
+        """csvをリストアップ. 存在するセキュリティグループを基準にする.
+
+        :param config:
+        :param client:
+        :return:
+        """
+        file_list = []
+        pathobj = Path(config.config.get("path"))
+        # すべてのSecurityGroup
+        for group in client.groups:
+            file_path = pathobj / ("%s.csv" % group.name)
+            file_list.append(file_path)
+        return file_list
 
     @staticmethod
-    def list_files(config, client):
-        """csvをリストアップ.
+    def list_files_local(config):
+        """csvをリストアップ. ローカルにあるファイルを基準とする.
 
         :param config:
         :return:
         """
         file_list = []
         pathobj = Path(config.config.get("path"))
-        for group in client.groups:
-            file_path = pathobj / ("%s.csv" % group.name)
-            file_list.append(file_path)
+        for subpath in pathobj.glob("*.csv"):
+            setting = SgService.file_setting(config, subpath)
+            if not setting:
+                continue
+            file_list.append(subpath)
         return file_list
 
     @staticmethod
@@ -302,7 +319,7 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config, client)
+            file_path_list = SgService.list_files_local(config)
         for file_path in file_path_list:
             group = SgService.file_setting(config, file_path)
             if not group:
