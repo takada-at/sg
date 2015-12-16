@@ -186,7 +186,13 @@ class SgService(object):
         :return:
         """
         file_contents = set()
+        groups = client.groups
+        groups = {gr.id: gr for gr in groups}
         for grant in SgService.read(target_file):
+            if grant.group in groups:
+                # セキュリティグループIDを名前に変換.
+                group_data = groups[grant.group]
+                grant.group = group_data.name or group_data.id
             file_contents.add(grant.rule)
         current_rules = {grant.rule for grant in client.get_list(group)}
         return Diff(local_only=file_contents-current_rules,
@@ -194,6 +200,13 @@ class SgService(object):
 
     @staticmethod
     def diff_list(config, client, file_path_list):
+        """複数ファイルの差分.
+
+        :param config:
+        :param client:
+        :param file_path_list:
+        :return:
+        """
         if not file_path_list:
             file_path_list = SgService.list_files(config)
         diffs = []

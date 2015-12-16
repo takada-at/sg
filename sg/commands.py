@@ -55,8 +55,8 @@ def diff_(ctx, file_path_list):
                                 file_path_list=file_path_list)
     for group_name, diff in diffs:
         print("GROUP: %s" % group_name)
-        more = ["+" + rule.as_line() for rule in diff.local_only]
-        more += ["-" + rule.as_line() for rule in diff.remote_only]
+        more = ["L:" + rule.as_line() for rule in diff.local_only]
+        more += ["R:" + rule.as_line() for rule in diff.remote_only]
         print("\n".join(more))
 
 

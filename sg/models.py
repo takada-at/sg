@@ -55,10 +55,15 @@ class Grant(object):
         self.group = group or None
         self.comment = comment
         self.is_cidr_ip = cidr_ip is not None
-        self.grant = cidr_ip or group
-        self.rule = Rule(self.ip_protocol, self.from_port,
-                         self.to_port, self.cidr_ip,
-                         self.group)
+
+    @property
+    def grant(self):
+        return self.cidr_ip or self.group
+
+    @property
+    def rule(self):
+        return Rule(self.ip_protocol, self.from_port,
+                    self.to_port, self.cidr_ip, self.group)
 
     def as_dict(self):
         return self.rule.as_dict()
