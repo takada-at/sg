@@ -56,7 +56,7 @@ class FileService(object):
         print("save", file_path)
         with open(str(file_path), 'w') as fio:
             keys = Grant.keys()
-            writer = csv.writer(fio)
+            writer = csv.writer(fio, lineterminator="\n")
             writer.writerow([to_str(val) for val in keys])
             for grant in data:
                 vals = []
@@ -208,10 +208,9 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config)
+            file_path_list = SgService.list_files(config, client)
         diffs = []
         for file_path in file_path_list:
-            file_path = Path(file_path)
             target_group = SgService.file_setting(config, file_path)
             diff = SgService.diff(client=client,
                                   group=target_group,
@@ -223,20 +222,30 @@ class SgService(object):
 
 
     @staticmethod
-    def list_files(config):
+    def list_files(config, client):
         """csvをリストアップ.
 
         :param config:
         :return:
         """
-        pathobj = Path(config.config.get("path"))
         file_list = []
-        for subpath in pathobj.glob("*.csv"):
-            setting = SgService.file_setting(config, subpath)
-            if not setting:
-                continue
-            file_list.append(subpath)
+        pathobj = Path(config.config.get("path"))
+        for group in client.groups:
+            file_path = pathobj / ("%s.csv" % group.name)
+            file_list.append(file_path)
         return file_list
+
+    @staticmethod
+    def groups_setting(config):
+        """グループ全体の設定を取得
+
+        :param config:
+        :return:
+        """
+        group_setting = config.group_data_path()
+        with group_setting.open() as fp:
+            data = json.load(fp, object_pairs_hook=OrderedDict)
+        return data
 
     @staticmethod
     def file_setting(config, target_file):
@@ -246,12 +255,10 @@ class SgService(object):
         :param target_file:
         :return:
         """
-        group_setting = config.group_data_path()
-        with group_setting.open() as fp:
-            data = json.load(fp, object_pairs_hook=OrderedDict)
-            for setting in data:
-                if setting['path'] == target_file.name:
-                    return setting['group']
+        data = SgService.groups_setting(config)
+        for setting in data:
+            if setting['path'] == target_file.name:
+                return setting['group']
 
     @staticmethod
     def commit(client, diff, target_group,
@@ -295,7 +302,7 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config)
+            file_path_list = SgService.list_files(config, client)
         for file_path in file_path_list:
             group = SgService.file_setting(config, file_path)
             if not group:

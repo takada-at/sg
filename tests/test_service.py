@@ -151,7 +151,7 @@ def test_list_files(config, files):
     :param files:
     :return:
     """
-    get_files = SgService.list_files(config)
+    get_files = SgService.list_files(config, AwsClient(config))
     assert set(files) == set(get_files)
 
 

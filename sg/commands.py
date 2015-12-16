@@ -30,8 +30,9 @@ def init(ctx):
 
 
 @group.command()
+@click.option('-y', '--no-confirm', default=False, is_flag=True)
 @click.pass_context
-def fetch(ctx):
+def fetch(ctx, no_confirm=False):
     """セキュリティグループの設定をcsvに保存。
     """
     pathobj = Path(ctx.obj['config'].config.get("path"))
@@ -39,7 +40,8 @@ def fetch(ctx):
         print("mkdir %s" % pathobj)
         pathobj.mkdir(parents=True)
     sg = AwsClient(ctx.obj['config'])
-    SgService.save_groups(config=ctx.obj['config'], client=sg, path=pathobj)
+    SgService.save_groups(config=ctx.obj['config'], client=sg, path=pathobj,
+                          noconfirm=no_confirm)
 
 
 @group.command("diff")
@@ -63,12 +65,14 @@ def diff_(ctx, file_path_list):
 @group.command()
 @click.argument('file_path_list', type=click.Path(exists=True),
                 nargs=-1)
+@click.option('-y', '--no-confirm', is_flag=True, default=False)
 @click.pass_context
-def commit(ctx, file_path_list):
+def commit(ctx, file_path_list, no_confirm=False):
     """アカウントにCSVの内容変更を反映。
     """
     client = AwsClient(ctx.obj['config'])
     config = ctx.obj['config']
     SgService.commit_list(config=config,
                           client=client,
-                          file_path_list=file_path_list)
+                          file_path_list=file_path_list,
+                          noconfirm=no_confirm)
