@@ -56,7 +56,7 @@ class FileService(object):
         print("save", file_path)
         with open(str(file_path), 'w') as fio:
             keys = Grant.keys()
-            writer = csv.writer(fio)
+            writer = csv.writer(fio, lineterminator="\n")
             writer.writerow([to_str(val) for val in keys])
             for grant in data:
                 vals = []
@@ -69,6 +69,11 @@ class FileService(object):
 class SgService(object):
     @staticmethod
     def save_config(config):
+        """設定を保存.
+
+        :param config:
+        :return:
+        """
         config_path = Path(config.config_path)
         if not config_path.exists():
             allow = True
@@ -98,6 +103,11 @@ class SgService(object):
 
     @staticmethod
     def read(target_file):
+        """csv読み込み.
+        
+        :param target_file:
+        :return:
+        """
         if not target_file.exists():
             raise StopIteration()
         for grant in FileService.read_csv(target_file):
@@ -208,10 +218,10 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config)
+            # 差分表示の際はセキュリティグループを基準にする.
+            file_path_list = SgService.list_files_remote(config, client)
         diffs = []
         for file_path in file_path_list:
-            file_path = Path(file_path)
             target_group = SgService.file_setting(config, file_path)
             diff = SgService.diff(client=client,
                                   group=target_group,
@@ -221,22 +231,49 @@ class SgService(object):
             diffs.append((target_group, diff))
         return diffs
 
+    @staticmethod
+    def list_files_remote(config, client):
+        """csvをリストアップ. 存在するセキュリティグループを基準にする.
+
+        :param config:
+        :param client:
+        :return:
+        """
+        file_list = []
+        pathobj = Path(config.config.get("path"))
+        # すべてのSecurityGroupとそれに対応するファイルをリストアップ
+        for group in client.groups:
+            file_path = pathobj / ("%s.csv" % group.name)
+            file_list.append(file_path)
+        return file_list
 
     @staticmethod
-    def list_files(config):
-        """csvをリストアップ.
+    def list_files_local(config):
+        """csvをリストアップ. ローカルにあるファイルを基準とする.
 
         :param config:
         :return:
         """
-        pathobj = Path(config.config.get("path"))
         file_list = []
+        pathobj = Path(config.config.get("path"))
         for subpath in pathobj.glob("*.csv"):
             setting = SgService.file_setting(config, subpath)
             if not setting:
                 continue
             file_list.append(subpath)
         return file_list
+
+    @staticmethod
+    def groups_setting(config):
+        """グループ全体の設定を取得
+
+        :param config:
+        :return:
+        """
+        group_setting = config.group_data_path()
+        with group_setting.open() as fp:
+            data = json.load(fp, object_pairs_hook=OrderedDict)
+        return data
 
     @staticmethod
     def file_setting(config, target_file):
@@ -246,12 +283,10 @@ class SgService(object):
         :param target_file:
         :return:
         """
-        group_setting = config.group_data_path()
-        with group_setting.open() as fp:
-            data = json.load(fp, object_pairs_hook=OrderedDict)
-            for setting in data:
-                if setting['path'] == target_file.name:
-                    return setting['group']
+        data = SgService.groups_setting(config)
+        for setting in data:
+            if setting['path'] == target_file.name:
+                return setting['group']
 
     @staticmethod
     def commit(client, diff, target_group,
@@ -295,7 +330,8 @@ class SgService(object):
         :return:
         """
         if not file_path_list:
-            file_path_list = SgService.list_files(config)
+            # 指定されていなければローカルにあるファイルすべてを候補とする
+            file_path_list = SgService.list_files_local(config)
         for file_path in file_path_list:
             group = SgService.file_setting(config, file_path)
             if not group:
