@@ -104,7 +104,7 @@ class SgService(object):
     @staticmethod
     def read(target_file):
         """csv読み込み.
-        
+
         :param target_file:
         :return:
         """
@@ -174,16 +174,16 @@ class SgService(object):
                              more="\n".join(more))
         if not allow:
             return file_path
-        grants = []
+        grants = set([])
         if file_path.exists():
             for grant in SgService.read(file_path):
                 if grant.rule not in diff.local_only:
-                    grants.append(grant)
-        for grant in client.get_list():
+                    grants.add(grant)
+        for grant in client.get_list(group=group.name):
             if grant.rule in diff.remote_only:
-                grants.append(grant)
-        grants.sort(key=lambda x: x.grant)
-        FileService.write_csv(file_path, grants)
+                grants.add(grant)
+        grant_list = sorted(grants, key=lambda x: x.grant)
+        FileService.write_csv(file_path, grant_list)
         return file_path
 
     @staticmethod
