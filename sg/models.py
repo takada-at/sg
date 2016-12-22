@@ -72,3 +72,9 @@ class Grant(object):
         rows = [self.rule.ip_protocol, self.rule.from_port,
                 self.rule.to_port, self.grant]
         return "\t".join(rows)
+
+    def __eq__(self, other):
+        return str(self) == str(other)
+
+    def __hash__(self):
+        return hash(str(self))
